@@ -49,8 +49,8 @@
     canvas {
       position: absolute;
       z-index: 2;
-      width: 90%;
-      height: 90%;
+      width: 100%;
+      height: 100%;
       touch-action: none;
       top: 50%;
       left: 50%;
@@ -69,9 +69,16 @@
       position: fixed;
       font-size: 30px;
       pointer-events: none;
-      animation: fall linear forwards;
       opacity: 0;
       z-index: 0;
+    }
+
+    .heart-falling {
+      animation: fall linear forwards;
+    }
+
+    .heart-exploding {
+      animation: explode ease-out forwards;
     }
 
     @keyframes fall {
@@ -84,18 +91,34 @@
         transform: translateY(100vh) rotate(360deg);
       }
     }
+
+    @keyframes explode {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(180deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(calc(var(--tx) * 2), calc(var(--ty) * 2)) scale(0.5) rotate(360deg);
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <div class="message">💖 Je t'aime 💖<br/>Bonne Saint-Valentin !</div>
+    <div class="message">Bonne Saint-Valentin !<br/>Je t'aime</div>
     <canvas id="scratch"></canvas>
     <script>
       const canvas = document.getElementById('scratch');
       const ctx = canvas.getContext('2d');
       let scratchedPercentage = 0;
-      let animationStarted = false;
+      let rainInterval = null;
+      let explosionTriggered = false;
 
       function resizeCanvas() {
         canvas.width = canvas.offsetWidth;
@@ -108,9 +131,9 @@
       function drawCover() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // CŒUR À GRATTER avec dégradé (sans fond blanc autour)
+        // CŒUR À GRATTER avec dégradé
         const cx = canvas.width / 2;
-        const cy = canvas.height / 2- canvas.height * 0.05;;
+        const cy = canvas.height / 2 - canvas.height * 0.07;
         
         // Dégradé pour un effet plus joli
         const gradient = ctx.createLinearGradient(cx - canvas.width * 0.5, cy - canvas.width * 0.5, cx + canvas.width * 0.5, cy + canvas.width * 0.5);
@@ -134,28 +157,28 @@
         // Pointe du bas
         ctx.moveTo(x, y + size);
         
-        // Courbe gauche du bas (douce, pas trop creusée)
+        // Courbe gauche du bas
         ctx.bezierCurveTo(
           x - size * 0.25, y + size * 0.6,
           x - size * 0.75, y + size * 0.25,
           x - size * 0.75, y
         );
         
-        // Bosse gauche du haut (arrondie)
+        // Bosse gauche du haut
         ctx.bezierCurveTo(
           x - size * 0.75, y - size * 0.45,
           x - size * 0.25, y - size * 0.55,
           x, y - size * 0.3
         );
         
-        // Bosse droite du haut (arrondie)
+        // Bosse droite du haut
         ctx.bezierCurveTo(
           x + size * 0.25, y - size * 0.55,
           x + size * 0.75, y - size * 0.45,
           x + size * 0.75, y
         );
         
-        // Courbe droite du bas (douce, pas trop creusée)
+        // Courbe droite du bas
         ctx.bezierCurveTo(
           x + size * 0.75, y + size * 0.25,
           x + size * 0.25, y + size * 0.6,
@@ -182,34 +205,88 @@
       }
 
       // Créer un cœur emoji qui tombe
-      function createFallingHeart() {
+      function createFallingHeart(speedMultiplier = 1) {
         const heart = document.createElement('div');
-        heart.className = 'heart-emoji';
+        heart.className = 'heart-emoji heart-falling';
         heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝'][Math.floor(Math.random() * 6)];
         heart.style.left = Math.random() * 100 + 'vw';
         heart.style.fontSize = (Math.random() * 20 + 20) + 'px';
-        heart.style.animationDuration = (Math.random() * 3 + 3) + 's';
+        
+        const baseDuration = 6 - (speedMultiplier * 2); // Plus rapide avec le grattage
+        heart.style.animationDuration = (Math.random() * 2 + Math.max(baseDuration, 2)) + 's';
         
         document.body.appendChild(heart);
         
-        setTimeout(() => heart.remove(), 6000);
+        setTimeout(() => heart.remove(), 8000);
       }
 
-      // Démarrer l'animation de pluie de cœurs
-      function startHeartRain() {
-        if (animationStarted) return;
-        animationStarted = true;
-        
-        // Créer beaucoup de cœurs au début
-        for (let i = 0; i < 30; i++) {
-          setTimeout(() => createFallingHeart(), i * 100);
+      // Explosion de cœurs depuis le centre de la carte
+      function createHeartExplosion() {
+        const cardRect = document.querySelector('.card').getBoundingClientRect();
+        const centerX = cardRect.left + cardRect.width / 2;
+        const centerY = cardRect.top + cardRect.height / 2;
+
+        // Créer 50 cœurs qui explosent dans toutes les directions
+        for (let i = 0; i < 50; i++) {
+          setTimeout(() => {
+            const heart = document.createElement('div');
+            heart.className = 'heart-emoji heart-exploding';
+            heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝', '❤️', '🧡', '💛', '💚', '💙', '💜'][Math.floor(Math.random() * 12)];
+            heart.style.left = centerX + 'px';
+            heart.style.top = centerY + 'px';
+            heart.style.fontSize = (Math.random() * 30 + 20) + 'px';
+            
+            // Direction aléatoire pour l'explosion
+            const angle = (Math.PI * 2 * i) / 50 + (Math.random() * 0.5 - 0.25);
+            const distance = 150 + Math.random() * 200;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            
+            heart.style.setProperty('--tx', tx + 'px');
+            heart.style.setProperty('--ty', ty + 'px');
+            heart.style.animationDuration = (Math.random() * 0.5 + 1) + 's';
+            
+            document.body.appendChild(heart);
+            
+            setTimeout(() => heart.remove(), 2000);
+          }, i * 20); // Décalage progressif pour un effet plus fluide
         }
-        
-        // Continuer avec des cœurs réguliers
-        setInterval(() => {
-          createFallingHeart();
-          if (Math.random() > 0.5) createFallingHeart();
-        }, 300);
+      }
+
+      // Gérer la pluie progressive
+      function updateHeartRain(percentage) {
+        // Démarrer la pluie dès le premier grattage
+        if (percentage > 50 && !rainInterval) {
+          rainInterval = setInterval(() => {
+            const intensity = scratchedPercentage / 100; // 0 à 1
+            const speedMultiplier = intensity * 2; // 0 à 2
+            
+            // Nombre de cœurs proportionnel au grattage
+            const heartsCount = Math.floor(1 + intensity * 3); // 1 à 4 cœurs
+            
+            for (let i = 0; i < heartsCount; i++) {
+              if (Math.random() < intensity) { // Probabilité augmente avec le grattage
+                createFallingHeart(speedMultiplier);
+              }
+            }
+          }, 400);
+        }
+
+        // Explosion finale à 80% de grattage
+        if (percentage > 90 && !explosionTriggered) {
+          explosionTriggered = true;
+          createHeartExplosion();
+          
+          // Intensifier la pluie après l'explosion
+          if (rainInterval) {
+            clearInterval(rainInterval);
+          }
+          rainInterval = setInterval(() => {
+            for (let i = 0; i < 4; i++) {
+              createFallingHeart(2);
+            }
+          }, 200);
+        }
       }
 
       let scratching = false;
@@ -228,9 +305,7 @@
 
         // Vérifier le pourcentage gratté
         scratchedPercentage = calculateScratchedPercentage();
-        if (scratchedPercentage > 90 && !animationStarted) {
-          startHeartRain();
-        }
+        updateHeartRain(scratchedPercentage);
       }
 
       canvas.addEventListener('pointerdown', e => {
