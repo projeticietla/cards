@@ -40,7 +40,7 @@
       transform: translate(-50%, -50%);
       text-align: center;
       color: #c2185b;
-      font-size: 1.2rem;
+      font-size: 1.4rem;
       font-weight: 600;
       padding: 20px;
       z-index: 0;
@@ -55,14 +55,6 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-    }
-
-    .hint {
-      position: absolute;
-      bottom: 12px;
-      font-size: 0.85rem;
-      color: #ad1457;
-      opacity: 0.8;
     }
 
     .heart-emoji {
@@ -80,6 +72,34 @@
     .heart-exploding {
       animation: explode ease-out forwards;
       z-index: 1000;
+    }
+
+    .next-button {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) scale(0);
+      background: linear-gradient(135deg, #ff4081, #d81b60);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(216, 27, 96, 0.4);
+      transition: all 0.3s ease;
+      z-index: 1001;
+      opacity: 0;
+    }
+
+    .next-button.show {
+      animation: appear 0.5s ease forwards;
+    }
+
+    .next-button:hover {
+      transform: translateX(-50%) scale(1.05);
+      box-shadow: 0 15px 40px rgba(216, 27, 96, 0.6);
     }
 
     @keyframes fall {
@@ -107,223 +127,221 @@
         transform: translate(calc(var(--tx) * 2), calc(var(--ty) * 2)) scale(0.5) rotate(360deg);
       }
     }
+
+    @keyframes appear {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0) translateY(20px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1) translateY(0);
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <div class="message">Bonne Saint-Valentin !<br/>Je t'aime</div>
+    <div class="message">Bonne Saint-Valentin !</div>
     <canvas id="scratch"></canvas>
-    <script>
-      const canvas = document.getElementById('scratch');
-      const ctx = canvas.getContext('2d');
-      let scratchedPercentage = 0;
-      let rainInterval = null;
-      let explosionTriggered = false;
-
-      function resizeCanvas() {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-        drawCover();
-      }
-
-      window.addEventListener('resize', resizeCanvas);
-
-      function drawCover() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // CŒUR À GRATTER avec dégradé
-        const cx = canvas.width / 2;
-        const cy = canvas.height / 2 - canvas.height * 0.07;
-        
-        // Dégradé pour un effet plus joli
-        const gradient = ctx.createLinearGradient(cx - canvas.width * 0.5, cy - canvas.width * 0.5, cx + canvas.width * 0.5, cy + canvas.width * 0.5);
-        gradient.addColorStop(0, '#ff4081');
-        gradient.addColorStop(1, '#d81b60');
-        ctx.fillStyle = gradient;
-        
-        drawHeart(cx, cy, canvas.width * 0.42);
-
-        // TEXTE D'AIDE
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('GRATTE ICI', canvas.width / 2, canvas.height / 2);
-      }
-
-      function drawHeart(x, y, size) {
-        ctx.beginPath();
-        
-        // Pointe du bas
-        ctx.moveTo(x, y + size);
-        
-        // Courbe gauche du bas
-        ctx.bezierCurveTo(
-          x - size * 0.25, y + size * 0.6,
-          x - size * 0.75, y + size * 0.25,
-          x - size * 0.75, y
-        );
-        
-        // Bosse gauche du haut
-        ctx.bezierCurveTo(
-          x - size * 0.75, y - size * 0.45,
-          x - size * 0.25, y - size * 0.55,
-          x, y - size * 0.3
-        );
-        
-        // Bosse droite du haut
-        ctx.bezierCurveTo(
-          x + size * 0.25, y - size * 0.55,
-          x + size * 0.75, y - size * 0.45,
-          x + size * 0.75, y
-        );
-        
-        // Courbe droite du bas
-        ctx.bezierCurveTo(
-          x + size * 0.75, y + size * 0.25,
-          x + size * 0.25, y + size * 0.6,
-          x, y + size
-        );
-        
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      // Calculer le pourcentage gratté
-      function calculateScratchedPercentage() {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const pixels = imageData.data;
-        let transparentPixels = 0;
-        
-        for (let i = 3; i < pixels.length; i += 4) {
-          if (pixels[i] < 128) {
-            transparentPixels++;
-          }
-        }
-        
-        return (transparentPixels / (pixels.length / 4)) * 100;
-      }
-
-      // Créer un cœur emoji qui tombe
-      function createFallingHeart(speedMultiplier = 1) {
-        const heart = document.createElement('div');
-        heart.className = 'heart-emoji heart-falling';
-        heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝'][Math.floor(Math.random() * 6)];
-        heart.style.left = Math.random() * 100 + 'vw';
-        heart.style.fontSize = (Math.random() * 20 + 20) + 'px';
-        
-        const baseDuration = 6 - (speedMultiplier * 2); // Plus rapide avec le grattage
-        heart.style.animationDuration = (Math.random() * 2 + Math.max(baseDuration, 2)) + 's';
-        
-        document.body.appendChild(heart);
-        
-        setTimeout(() => heart.remove(), 8000);
-      }
-
-      // Explosion de cœurs depuis le centre de la carte
-      function createHeartExplosion() {
-        const cardRect = document.querySelector('.card').getBoundingClientRect();
-        const centerX = cardRect.left + cardRect.width / 2;
-        const centerY = cardRect.top + cardRect.height / 2;
-
-        // Créer 60 cœurs qui explosent dans toutes les directions
-        for (let i = 0; i < 60; i++) {
-          setTimeout(() => {
-            const heart = document.createElement('div');
-            heart.className = 'heart-emoji heart-exploding';
-            heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝', '❤️', '🧡', '💛', '💚', '💙', '💜'][Math.floor(Math.random() * 12)];
-            heart.style.left = centerX + 'px';
-            heart.style.top = centerY + 'px';
-            heart.style.fontSize = (Math.random() * 40 + 25) + 'px';
-            
-            // Direction aléatoire pour l'explosion
-            const angle = (Math.PI * 2 * i) / 60 + (Math.random() * 0.5 - 0.25);
-            const distance = 180 + Math.random() * 250;
-            const tx = Math.cos(angle) * distance;
-            const ty = Math.sin(angle) * distance;
-            
-            heart.style.setProperty('--tx', tx + 'px');
-            heart.style.setProperty('--ty', ty + 'px');
-            heart.style.animationDuration = (Math.random() * 0.5 + 1.2) + 's';
-            
-            document.body.appendChild(heart);
-            
-            setTimeout(() => heart.remove(), 2500);
-          }, i * 15); // Décalage progressif pour un effet plus fluide
-        }
-      }
-
-      // Gérer la pluie progressive
-      function updateHeartRain(percentage) {
-        // Démarrer la pluie dès le premier grattage
-        if (percentage > 50 && !rainInterval) {
-          rainInterval = setInterval(() => {
-            const intensity = scratchedPercentage / 100; // 0 à 1
-            const speedMultiplier = intensity * 2; // 0 à 2
-            
-            // Nombre de cœurs proportionnel au grattage
-            const heartsCount = Math.floor(1 + intensity * 3); // 1 à 4 cœurs
-            
-            for (let i = 0; i < heartsCount; i++) {
-              if (Math.random() < intensity) { // Probabilité augmente avec le grattage
-                createFallingHeart(speedMultiplier);
-              }
-            }
-          }, 400);
-        }
-
-        // Explosion finale à 90% de grattage
-        if (percentage > 90 && !explosionTriggered) {
-          explosionTriggered = true;
-          createHeartExplosion();
-          
-          // Intensifier la pluie après l'explosion
-          if (rainInterval) {
-            clearInterval(rainInterval);
-          }
-          rainInterval = setInterval(() => {
-            for (let i = 0; i < 4; i++) {
-              createFallingHeart(2);
-            }
-          }, 200);
-        }
-      }
-
-      let scratching = false;
-
-      function scratch(clientX, clientY) {
-        const rect = canvas.getBoundingClientRect();
-        const x = (clientX - rect.left) * (canvas.width / rect.width);
-        const y = (clientY - rect.top) * (canvas.height / rect.height);
-
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(x, y, 26, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        // Vérifier le pourcentage gratté
-        scratchedPercentage = calculateScratchedPercentage();
-        updateHeartRain(scratchedPercentage);
-      }
-
-      canvas.addEventListener('pointerdown', e => {
-        scratching = true;
-        scratch(e.clientX, e.clientY);
-      });
-
-      canvas.addEventListener('pointermove', e => {
-        if (!scratching) return;
-        scratch(e.clientX, e.clientY);
-      });
-
-      window.addEventListener('pointerup', () => scratching = false);
-
-      resizeCanvas();
-    </script>
   </div>
+
+  <button class="next-button" id="nextButton">Continuer ➡️</button>
+
+  <script>
+    const canvas = document.getElementById('scratch');
+    const ctx = canvas.getContext('2d');
+    const nextButton = document.getElementById('nextButton');
+    let scratchedPercentage = 0;
+    let rainInterval = null;
+    let explosionTriggered = false;
+
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      drawCover();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawCover() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2 - canvas.height * 0.07;
+      
+      const gradient = ctx.createLinearGradient(cx - canvas.width * 0.5, cy - canvas.width * 0.5, cx + canvas.width * 0.5, cy + canvas.width * 0.5);
+      gradient.addColorStop(0, '#ff4081');
+      gradient.addColorStop(1, '#d81b60');
+      ctx.fillStyle = gradient;
+      
+      drawHeart(cx, cy, canvas.width * 0.42);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('GRATTE ICI', canvas.width / 2, canvas.height / 2);
+    }
+
+    function drawHeart(x, y, size) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + size);
+      ctx.bezierCurveTo(
+        x - size * 0.25, y + size * 0.6,
+        x - size * 0.75, y + size * 0.25,
+        x - size * 0.75, y
+      );
+      ctx.bezierCurveTo(
+        x - size * 0.75, y - size * 0.45,
+        x - size * 0.25, y - size * 0.55,
+        x, y - size * 0.3
+      );
+      ctx.bezierCurveTo(
+        x + size * 0.25, y - size * 0.55,
+        x + size * 0.75, y - size * 0.45,
+        x + size * 0.75, y
+      );
+      ctx.bezierCurveTo(
+        x + size * 0.75, y + size * 0.25,
+        x + size * 0.25, y + size * 0.6,
+        x, y + size
+      );
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function calculateScratchedPercentage() {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels = imageData.data;
+      let transparentPixels = 0;
+      
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] < 128) {
+          transparentPixels++;
+        }
+      }
+      
+      return (transparentPixels / (pixels.length / 4)) * 100;
+    }
+
+    function createFallingHeart(speedMultiplier = 1) {
+      const heart = document.createElement('div');
+      heart.className = 'heart-emoji heart-falling';
+      heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝'][Math.floor(Math.random() * 6)];
+      heart.style.left = Math.random() * 100 + 'vw';
+      heart.style.fontSize = (Math.random() * 20 + 20) + 'px';
+      
+      const baseDuration = 6 - (speedMultiplier * 2);
+      heart.style.animationDuration = (Math.random() * 2 + Math.max(baseDuration, 2)) + 's';
+      
+      document.body.appendChild(heart);
+      setTimeout(() => heart.remove(), 8000);
+    }
+
+    function createHeartExplosion() {
+      const cardRect = document.querySelector('.card').getBoundingClientRect();
+      const centerX = cardRect.left + cardRect.width / 2;
+      const centerY = cardRect.top + cardRect.height / 2;
+
+      for (let i = 0; i < 60; i++) {
+        setTimeout(() => {
+          const heart = document.createElement('div');
+          heart.className = 'heart-emoji heart-exploding';
+          heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝', '❤️', '🧡', '💛', '💚', '💙', '💜'][Math.floor(Math.random() * 12)];
+          heart.style.left = centerX + 'px';
+          heart.style.top = centerY + 'px';
+          heart.style.fontSize = (Math.random() * 40 + 25) + 'px';
+          
+          const angle = (Math.PI * 2 * i) / 60 + (Math.random() * 0.5 - 0.25);
+          const distance = 180 + Math.random() * 250;
+          const tx = Math.cos(angle) * distance;
+          const ty = Math.sin(angle) * distance;
+          
+          heart.style.setProperty('--tx', tx + 'px');
+          heart.style.setProperty('--ty', ty + 'px');
+          heart.style.animationDuration = (Math.random() * 0.5 + 1.2) + 's';
+          
+          document.body.appendChild(heart);
+          setTimeout(() => heart.remove(), 2500);
+        }, i * 15);
+      }
+    }
+
+    function updateHeartRain(percentage) {
+      if (percentage > 50 && !rainInterval) {
+        rainInterval = setInterval(() => {
+          const intensity = scratchedPercentage / 100;
+          const speedMultiplier = intensity * 2;
+          const heartsCount = Math.floor(1 + intensity * 3);
+          
+          for (let i = 0; i < heartsCount; i++) {
+            if (Math.random() < intensity) {
+              createFallingHeart(speedMultiplier);
+            }
+          }
+        }, 400);
+      }
+
+      if (percentage > 90 && !explosionTriggered) {
+        explosionTriggered = true;
+        createHeartExplosion();
+        
+        if (rainInterval) {
+          clearInterval(rainInterval);
+        }
+        rainInterval = setInterval(() => {
+          for (let i = 0; i < 4; i++) {
+            createFallingHeart(2);
+          }
+        }, 200);
+      }
+
+      // Afficher le bouton à 100%
+      if (percentage >= 99.5) {
+        setTimeout(() => {
+          nextButton.classList.add('show');
+        }, 1000);
+      }
+    }
+
+    let scratching = false;
+
+    function scratch(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (clientX - rect.left) * (canvas.width / rect.width);
+      const y = (clientY - rect.top) * (canvas.height / rect.height);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(x, y, 26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      scratchedPercentage = calculateScratchedPercentage();
+      updateHeartRain(scratchedPercentage);
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      scratching = true;
+      scratch(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!scratching) return;
+      scratch(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('pointerup', () => scratching = false);
+
+    nextButton.addEventListener('click', () => {
+      window.location.href = 'question.html';
+    });
+
+    resizeCanvas();
+  </script>
 
 </body>
 </html>
