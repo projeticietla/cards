@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carte Saint-Valentin – Grattage</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    .card {
+      width: 90vw;
+      max-width: 400px;
+      aspect-ratio: 1 / 1.1;
+      background: #fff0f5;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      padding: 20px;
+      z-index: 1;
+    }
+
+    .message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #c2185b;
+      font-size: 1.4rem;
+      font-weight: 600;
+      padding: 20px;
+      z-index: 0;
+    }
+
+    canvas {
+      position: absolute;
+      z-index: 2;
+      width: 90%;
+      height: 90%;
+      touch-action: none;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .hint {
+      position: absolute;
+      bottom: 12px;
+      font-size: 0.85rem;
+      color: #ad1457;
+      opacity: 0.8;
+    }
+
+    .heart-emoji {
+      position: fixed;
+      font-size: 30px;
+      pointer-events: none;
+      animation: fall linear forwards;
+      opacity: 0;
+      z-index: 0;
+    }
+
+    @keyframes fall {
+      0% {
+        opacity: 1;
+        transform: translateY(-100px) rotate(0deg);
+      }
+      100% {
+        opacity: 0.3;
+        transform: translateY(100vh) rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="message">💖 Je t'aime 💖<br/>Bonne Saint-Valentin !</div>
+    <canvas id="scratch"></canvas>
+    <script>
+      const canvas = document.getElementById('scratch');
+      const ctx = canvas.getContext('2d');
+      let scratchedPercentage = 0;
+      let animationStarted = false;
+
+      function resizeCanvas() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        drawCover();
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+
+      function drawCover() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // CŒUR À GRATTER avec dégradé (sans fond blanc autour)
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2- canvas.height * 0.05;;
+        
+        // Dégradé pour un effet plus joli
+        const gradient = ctx.createLinearGradient(cx - canvas.width * 0.5, cy - canvas.width * 0.5, cx + canvas.width * 0.5, cy + canvas.width * 0.5);
+        gradient.addColorStop(0, '#ff4081');
+        gradient.addColorStop(1, '#d81b60');
+        ctx.fillStyle = gradient;
+        
+        drawHeart(cx, cy, canvas.width * 0.42);
+
+        // TEXTE D'AIDE
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('GRATTE ICI', canvas.width / 2, canvas.height / 2);
+      }
+
+      function drawHeart(x, y, size) {
+        ctx.beginPath();
+        
+        // Pointe du bas
+        ctx.moveTo(x, y + size);
+        
+        // Courbe gauche du bas (douce, pas trop creusée)
+        ctx.bezierCurveTo(
+          x - size * 0.25, y + size * 0.6,
+          x - size * 0.75, y + size * 0.25,
+          x - size * 0.75, y
+        );
+        
+        // Bosse gauche du haut (arrondie)
+        ctx.bezierCurveTo(
+          x - size * 0.75, y - size * 0.45,
+          x - size * 0.25, y - size * 0.55,
+          x, y - size * 0.3
+        );
+        
+        // Bosse droite du haut (arrondie)
+        ctx.bezierCurveTo(
+          x + size * 0.25, y - size * 0.55,
+          x + size * 0.75, y - size * 0.45,
+          x + size * 0.75, y
+        );
+        
+        // Courbe droite du bas (douce, pas trop creusée)
+        ctx.bezierCurveTo(
+          x + size * 0.75, y + size * 0.25,
+          x + size * 0.25, y + size * 0.6,
+          x, y + size
+        );
+        
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Calculer le pourcentage gratté
+      function calculateScratchedPercentage() {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        let transparentPixels = 0;
+        
+        for (let i = 3; i < pixels.length; i += 4) {
+          if (pixels[i] < 128) {
+            transparentPixels++;
+          }
+        }
+        
+        return (transparentPixels / (pixels.length / 4)) * 100;
+      }
+
+      // Créer un cœur emoji qui tombe
+      function createFallingHeart() {
+        const heart = document.createElement('div');
+        heart.className = 'heart-emoji';
+        heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝'][Math.floor(Math.random() * 6)];
+        heart.style.left = Math.random() * 100 + 'vw';
+        heart.style.fontSize = (Math.random() * 20 + 20) + 'px';
+        heart.style.animationDuration = (Math.random() * 3 + 3) + 's';
+        
+        document.body.appendChild(heart);
+        
+        setTimeout(() => heart.remove(), 6000);
+      }
+
+      // Démarrer l'animation de pluie de cœurs
+      function startHeartRain() {
+        if (animationStarted) return;
+        animationStarted = true;
+        
+        // Créer beaucoup de cœurs au début
+        for (let i = 0; i < 30; i++) {
+          setTimeout(() => createFallingHeart(), i * 100);
+        }
+        
+        // Continuer avec des cœurs réguliers
+        setInterval(() => {
+          createFallingHeart();
+          if (Math.random() > 0.5) createFallingHeart();
+        }, 300);
+      }
+
+      let scratching = false;
+
+      function scratch(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (clientX - rect.left) * (canvas.width / rect.width);
+        const y = (clientY - rect.top) * (canvas.height / rect.height);
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(x, y, 26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Vérifier le pourcentage gratté
+        scratchedPercentage = calculateScratchedPercentage();
+        if (scratchedPercentage > 90 && !animationStarted) {
+          startHeartRain();
+        }
+      }
+
+      canvas.addEventListener('pointerdown', e => {
+        scratching = true;
+        scratch(e.clientX, e.clientY);
+      });
+
+      canvas.addEventListener('pointermove', e => {
+        if (!scratching) return;
+        scratch(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('pointerup', () => scratching = false);
+
+      resizeCanvas();
+    </script>
+  </div>
+
+</body>
+</html>
