@@ -44,6 +44,16 @@
       line-height: 1.4;
     }
 
+    .question.animated {
+      animation: breathe 3s ease-in-out infinite;
+    }
+
+    .animated-heart {
+      display: inline-block;
+      animation: heartbeat 1.5s ease-in-out infinite;
+      transform-origin: center;
+    }
+
     .buttons-container {
       display: flex;
       gap: 20px;
@@ -90,8 +100,40 @@
       font-size: 30px;
       pointer-events: none;
       opacity: 0;
+    }
+
+    .heart-exploding {
       z-index: 1000;
       animation: explode ease-out forwards;
+    }
+
+    .heart-falling {
+      z-index: 0;
+      animation: fall linear forwards;
+    }
+
+    .letter {
+      display: inline-block;
+      opacity: 0;
+      animation: letterAppear 0.6s ease forwards;
+    }
+
+    @keyframes heartbeat {
+      0%, 100% {
+        transform: scale(1);
+      }
+      10% {
+        transform: scale(1.2);
+      }
+      20% {
+        transform: scale(1);
+      }
+      30% {
+        transform: scale(1.2);
+      }
+      40% {
+        transform: scale(1);
+      }
     }
 
     @keyframes explode {
@@ -108,13 +150,47 @@
         transform: translate(calc(var(--tx) * 2), calc(var(--ty) * 2)) scale(0.5) rotate(360deg);
       }
     }
+
+    @keyframes fall {
+      0% {
+        opacity: 1;
+        transform: translateY(-100px) rotate(0deg);
+      }
+      100% {
+        opacity: 0.3;
+        transform: translateY(100vh) rotate(360deg);
+      }
+    }
+
+    @keyframes letterAppear {
+      0% {
+        opacity: 0;
+        transform: translate(var(--start-x), var(--start-y)) rotate(var(--start-rotate)) scale(0);
+      }
+      60% {
+        transform: translate(0, 0) rotate(0deg) scale(1.2);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0deg) scale(1);
+      }
+    }
+
+    @keyframes breathe {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <div class="question">
-      Madame voulez-vous être ma Valentine ? ❤️
+    <div class="question" id="questionText">
+      Madame voulez-vous être ma Valentine ? <span class="animated-heart">&#10084;&#65039;</span>
     </div>
     <div class="buttons-container">
       <button class="btn btn-yes" id="btnYes">Oui</button>
@@ -126,6 +202,33 @@
     const btnYes = document.getElementById('btnYes');
     const btnNo = document.getElementById('btnNo');
     const card = document.querySelector('.card');
+    const questionText = document.getElementById('questionText');
+    let rainInterval = null;
+
+    // Créer un cœur qui tombe
+    function createFallingHeart() {
+      const heart = document.createElement('div');
+      heart.className = 'heart-emoji heart-falling';
+      const hearts = ['\u{1F495}', '\u{1F496}', '\u{1F497}', '\u{1F493}', '\u{1F49E}', '\u{1F49D}'];
+      heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+      heart.style.left = Math.random() * 100 + 'vw';
+      heart.style.fontSize = (Math.random() * 20 + 20) + 'px';
+      heart.style.animationDuration = (Math.random() * 2 + 3) + 's';
+      
+      document.body.appendChild(heart);
+      setTimeout(() => heart.remove(), 8000);
+    }
+
+    // Démarrer la pluie de cœurs
+    function startHeartRain() {
+      if (rainInterval) return;
+      
+      rainInterval = setInterval(() => {
+        for (let i = 0; i < 4; i++) {
+          createFallingHeart();
+        }
+      }, 200);
+    }
 
     // Explosion de cœurs
     function createHeartExplosion() {
@@ -136,8 +239,9 @@
       for (let i = 0; i < 60; i++) {
         setTimeout(() => {
           const heart = document.createElement('div');
-          heart.className = 'heart-emoji';
-          heart.textContent = ['💕', '💖', '💗', '💓', '💞', '💝', '❤️', '🧡', '💛', '💚', '💙', '💜'][Math.floor(Math.random() * 12)];
+          heart.className = 'heart-emoji heart-exploding';
+          const hearts = ['\u{1F495}', '\u{1F496}', '\u{1F497}', '\u{1F493}', '\u{1F49E}', '\u{1F49D}', '\u{2764}\u{FE0F}', '\u{1F9E1}', '\u{1F49B}', '\u{1F49A}', '\u{1F499}', '\u{1F49C}'];
+          heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
           heart.style.left = centerX + 'px';
           heart.style.top = centerY + 'px';
           heart.style.fontSize = (Math.random() * 40 + 25) + 'px';
@@ -157,18 +261,79 @@
       }
     }
 
+    // Animation du texte lettre par lettre
+    function animateText(htmlText) {
+      questionText.innerHTML = '';
+      
+      // Créer un élément temporaire pour parser le HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlText;
+      
+      let totalDelay = 0;
+      
+      // Fonction récursive pour parcourir tous les nœuds
+      function processNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          // C'est du texte, on le traite lettre par lettre
+          const text = node.textContent;
+          // Utiliser Array.from pour gérer correctement les emojis
+          const letters = Array.from(text);
+          
+          letters.forEach((char) => {
+            const span = document.createElement('span');
+            span.className = 'letter';
+            span.textContent = char === ' ' ? '\u00A0' : char;
+            
+            const startX = (Math.random() - 0.5) * 400;
+            const startY = (Math.random() - 0.5) * 400;
+            const startRotate = (Math.random() - 0.5) * 720;
+            
+            span.style.setProperty('--start-x', startX + 'px');
+            span.style.setProperty('--start-y', startY + 'px');
+            span.style.setProperty('--start-rotate', startRotate + 'deg');
+            span.style.animationDelay = totalDelay + 's';
+            totalDelay += 0.05;
+            
+            questionText.appendChild(span);
+          });
+        } else if (node.nodeName === 'BR') {
+          // C'est un saut de ligne
+          questionText.appendChild(document.createElement('br'));
+        } else if (node.childNodes) {
+          // C'est un élément avec des enfants, on parcourt les enfants
+          node.childNodes.forEach(child => processNode(child));
+        }
+      }
+      
+      // Traiter tous les nœuds de l'élément temporaire
+      tempDiv.childNodes.forEach(node => processNode(node));
+      
+      // Ajouter l'animation de respiration après que toutes les lettres soient apparues
+      setTimeout(() => {
+        questionText.classList.add('animated');
+      }, totalDelay * 1000 + 600);
+    }
+
     // Bouton OUI
     btnYes.addEventListener('click', () => {
       createHeartExplosion();
+      
+      // Démarrer la pluie après l'explosion
       setTimeout(() => {
-        card.querySelector('.question').innerHTML = 'Je savais que tu dirais oui ! 💕<br/>Je t\'aime ! <br/> Rendez-vous ce weekend 😘';
+        startHeartRain();
+      }, 1000);
+      
+      // Cacher les boutons et animer le nouveau texte
+      setTimeout(() => {
         document.querySelector('.buttons-container').style.display = 'none';
+        // Utiliser des codes Unicode pour les emojis
+        const message = 'Je savais que tu dirais oui ! \u{1F495}<br/>Je t\'aime ! <br/> Rendez-vous ce weekend \u{1F618}';
+        animateText(message);
       }, 500);
     });
 
     // Bouton NON - se déplace aléatoirement
     function moveNoButton() {
-      // Au premier mouvement, on passe en position fixed
       if (!btnNo.classList.contains('floating')) {
         btnNo.classList.add('floating');
       }
