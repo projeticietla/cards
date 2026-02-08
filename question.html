@@ -114,7 +114,7 @@
 
   <div class="card">
     <div class="question">
-      Veux-tu être ma Valentine ? ❤️
+      Madame voulez-vous être ma Valentine ? ❤️
     </div>
     <div class="buttons-container">
       <button class="btn btn-yes" id="btnYes">Oui</button>
@@ -161,7 +161,7 @@
     btnYes.addEventListener('click', () => {
       createHeartExplosion();
       setTimeout(() => {
-        card.querySelector('.question').innerHTML = 'Je savais que tu dirais oui ! 💕<br/>Je t\'aime ! 😍';
+        card.querySelector('.question').innerHTML = 'Je savais que tu dirais oui ! 💕<br/>Je t\'aime ! <br/> Rendez-vous ce weekend 😘';
         document.querySelector('.buttons-container').style.display = 'none';
       }, 500);
     });
